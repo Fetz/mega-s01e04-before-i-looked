@@ -1,0 +1,46 @@
+name: Publish digest preview
+on:
+  workflow_dispatch:
+    inputs:
+      marker:
+        description: Lane marker; leave empty for cleanup after review
+        required: false
+        type: string
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts
+      - run: npm run typecheck && npm test
+      - name: Capture self-contained page
+        env:
+          LANE_MARKER: ${{ inputs.marker }}
+          PORT: '8787'
+        run: |
+          mkdir -p "$RUNNER_TEMP/preview"
+          npm start > "$RUNNER_TEMP/rig.log" 2>&1 &
+          for n in $(seq 1 30); do
+            if curl -fsS http://localhost:8787/health > /dev/null; then break; fi
+            sleep 1
+          done
+          sh scripts/capture-preview.sh http://localhost:8787/digest/2026-10-28 "$RUNNER_TEMP/preview/index.html"
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/preview
+      - id: deployment
+        uses: actions/deploy-pages@v4

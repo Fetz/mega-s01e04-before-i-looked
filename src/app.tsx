@@ -1,3 +1,4 @@
+import { DigestPage } from './views/digest.js';
 import { readNight } from './digest/read-night.js';
 import { Hono } from 'hono';
 import { loadConfig, type RigConfig } from './config.js';
@@ -8,6 +9,11 @@ import { StatusBoard } from './views/status.js';
 
 export function createApp(config: RigConfig = loadConfig()) {
   const app = new Hono();
+
+  app.get('/digest/:night', (c) => {
+    const digest = readNight(config.runsDir, c.req.param('night'));
+    return digest ? c.html(<Layout title={`digest ${digest.night}`} lane={lane()}><DigestPage digest={digest} /></Layout>) : c.text('night not found', 404);
+  });
 
   app.get('/api/digest/:night', (c) => {
     const digest = readNight(config.runsDir, c.req.param('night'));

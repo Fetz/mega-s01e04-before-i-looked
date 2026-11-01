@@ -19,7 +19,7 @@ export function createApp(config: RigConfig = loadConfig()) {
   app.get('/', (c) =>
     c.html(
       <Layout title="status" lane={lane()}>
-        <StatusBoard status={readStatus(config)} />
+        <StatusBoard status={readStatus(config)} digests={readStatus(config).nights.flatMap((night) => { const d = readNight(config.runsDir, night); return d ? [d] : []; })} />
       </Layout>,
     ),
   );
